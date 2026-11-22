@@ -1,13 +1,9 @@
 // Persistent state в localStorage. Единственная точка изменения state.
-// Все мутации — через мутацию полей: state.words[id].level = ...;
-// Полная замена объекта — через setState(newState).
 
-// в storage.js добавить:
-export { migrateV2toV3 };
 import {
   STORAGE_KEY, BACKUP_KEY, BACKUP_TS_KEY,
   STATE_VERSION, LEGACY_VERSION, MAX_LEVEL,
-  SESSION_GAP_MS, BACKUP_INTERVAL_MS, DEFAULT_DAILY_GOAL,
+  SESSION_GAP_MS, BACKUP_INTERVAL_MS, DEFAULT_DAILY_GOAL, DAY_MS,
 } from './config.js';
 import { WORDS } from './words.js';
 import { todayStr, dateStrFor } from './utils.js';
@@ -20,6 +16,7 @@ export function createEmptyState() {
   return {
     version: STATE_VERSION,
     words: {},
+    reports: [],
     stats: {
       totalRounds: 0, firstTryCorrect: 0,
       correctAttempts: 0, wrongAttempts: 0,
@@ -50,8 +47,7 @@ function normalizeWordState(raw) {
   };
 }
 
-// v2 → v3: пересчитываем ID слов по позиции в массиве (для старых снимков).
-function migrateV2toV3(old) {
+export function migrateV2toV3(old) {
   const s = createEmptyState();
   const newWords = {};
   Object.entries(old.words || {}).forEach(([key, val]) => {
@@ -120,6 +116,7 @@ export function loadState() {
   Object.entries(state.words).forEach(([id, s]) => {
     state.words[id] = normalizeWordState(s);
   });
+  if (!state.reports) state.reports = [];
   if (!state.stats.history) state.stats.history = [];
   if (!state.session) state.session = createEmptyState().session;
   if (!state.meta) state.meta = createEmptyState().meta;
@@ -185,17 +182,10 @@ export function updateDailyOnRound() {
 
   const ds = state.dailyStreak;
   if (ds.lastActiveDate !== today) {
-    const yesterday = dateStrFor(Date.now() - 86400000);
+    const yesterday = dateStrFor(Date.now() - DAY_MS);
     if (ds.lastActiveDate === yesterday) ds.current++;
     else ds.current = 1;
     ds.lastActiveDate = today;
     if (ds.current > ds.best) ds.best = ds.current;
   }
-}
-
-export function ensureWordState(id) {
-  if (!state.words[id]) {
-    state.words[id] = normalizeWordState({ firstSeen: Date.now() });
-  }
-  return state.words[id];
 }
