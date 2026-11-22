@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0f11" media="(prefers-color-scheme: dark)">
+<title>RUTR · тренажер орфографии</title>
+<link rel="stylesheet" href="styles.css">
+
+<!-- Глобальный обработчик ошибок загрузки.
+     Если какой-то модуль не загрузился / WORDS пуст — увидим красный экран,
+     а не молчаливый пустой интерфейс. -->
+<script>
+  window.addEventListener('error', function (e) {
+    if (!e || !e.message) return;
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;background:#fef2f2;color:#991b1b;' +
+      'padding:20px;z-index:99999;font-family:ui-monospace,Menlo,monospace;' +
+      'font-size:13px;line-height:1.5;overflow:auto';
+    box.innerHTML = '<b style="font-size:15px">⚠ Ошибка запуска</b><br>' +
+      String(e.message).replace(/</g,'&lt;') +
+      '<br><br><span style="opacity:.7">' +
+      (e.filename || '') + ':' + (e.lineno || '') + ':' + (e.colno || '') +
+      '</span>';
+    document.body
+      ? document.body.appendChild(box)
+      : document.addEventListener('DOMContentLoaded', function () {
+          document.body.appendChild(box);
+        });
+  });
+</script>
+</head>
+<body>
+
+<aside class="side-panel" aria-label="Рекламное место">
+  <div class="panel-slot">
+    <small>Реклама</small>
+    <strong>Ваш рекламный баннер</strong>
+    <span>Место для объявления<br>250 × 250 px</span>
+  </div>
+</aside>
+
+<div class="app">
+  <div class="top-notice">
+    <small>Реклама</small>
+    <strong>Рекламный баннер</strong>
+  </div>
+
+  <header class="site-header">
+    <h1 class="site-title"><b>RUTR</b><span>: тренажер орфографии</span></h1>
+
+    <div class="segmented">
+      <div class="dropdown" id="dropdownTask">
+        <button class="seg-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="seg-label">Задания ЕГЭ</span>
+          <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu" role="listbox" aria-label="Задания">
+          <button class="dropdown-item active" type="button" role="option" data-value="all" aria-selected="true">Все</button>
+          <button class="dropdown-item" type="button" role="option" data-value="9" aria-selected="false">Задание 9</button>
+          <button class="dropdown-item" type="button" role="option" data-value="10" aria-selected="false">Задание 10</button>
+          <button class="dropdown-item" type="button" role="option" data-value="11" aria-selected="false">Задание 11</button>
+          <button class="dropdown-item" type="button" role="option" data-value="12" aria-selected="false">Задание 12</button>
+        </div>
+      </div>
+
+      <div class="dropdown" id="dropdownProgress">
+        <button class="seg-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="seg-label">Прогресс</span>
+          <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu" role="listbox" aria-label="Прогресс">
+          <button class="dropdown-item active" type="button" role="option" data-value="all" aria-selected="true">Все</button>
+          <button class="dropdown-item" type="button" role="option" data-value="errors" aria-selected="false">Ошибки</button>
+          <button class="dropdown-item" type="button" role="option" data-value="new" aria-selected="false">Неизученные</button>
+          <button class="dropdown-item" type="button" role="option" data-value="review" aria-selected="false">Повторение</button>
+          <button class="dropdown-item" type="button" role="option" data-value="hard" aria-selected="false">Сложные</button>
+        </div>
+      </div>
+
+      <div class="dropdown" id="dropdownProfile">
+        <button class="seg-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="seg-label">Профиль</span>
+          <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right">
+          <button class="dropdown-item" type="button" data-action="profile">👤 Мой профиль</button>
+          <button class="dropdown-item" type="button" data-action="stats">📊 Статистика</button>
+          <button class="dropdown-item" type="button" data-action="settings">⚙ Настройки</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="error-banner" id="errorBanner" hidden>
+    <div class="error-banner-main">
+      <span class="error-banner-icon">📝</span>
+      <div class="error-banner-text">
+        <div class="error-banner-title" id="errorBannerTitle"></div>
+        <div class="error-banner-sub" id="errorBannerSub"></div>
+      </div>
+    </div>
+    <div class="error-banner-actions">
+      <button class="error-banner-btn" id="errorBannerListBtn" type="button" hidden>📋</button>
+      <button class="error-banner-btn error-banner-btn-primary" id="errorBannerActionBtn" type="button"></button>
+    </div>
+  </div>
+
+  <div class="card" id="card">
+    <div class="card-top">
+      <div class="task-label" id="taskLabel">Задание 9</div>
+      <div class="session-badge" id="sessionBadge" hidden></div>
+    </div>
+    <div class="word" id="word">—</div>
+
+    <div class="answer-row">
+      <input class="answer-input" id="answerInput" type="text" maxlength="1"
+             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+             inputmode="text" aria-label="Пропущенная буква">
+      <button class="btn btn-primary" id="submitBtn">Проверить</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="actions" id="actions">
+      <button class="btn btn-primary" id="nextBtn">Дальше →</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-left">
+      <button class="stats" id="statsBtn" title="Подробная статистика">
+        <span>Слов: <b id="statSolved">0</b></span>
+        <span>Ошибок: <b id="statErrors">0</b></span>
+      </button>
+    </div>
+    <div class="footer-right">
+      <span class="streak" id="streak"></span>
+      <span class="pill" id="dayStreak" title="Дни подряд" style="display:none"></span>
+      <span class="pill" id="dailyGoal" title="Дневная цель"></span>
+    </div>
+  </footer>
+</div>
+
+<aside class="side-panel" aria-label="Рекламное место справа">
+  <div class="panel-slot">
+    <small>Реклама</small>
+    <strong>Ваш рекламный баннер</strong>
+    <span>Место для объявления<br>250 × 250 px</span>
+  </div>
+</aside>
+
+<dialog class="modal" id="statsModal">
+  <div class="modal-header">
+    <h2>Статистика</h2>
+    <button class="icon-btn" data-close="statsModal" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="modal-body" id="statsBody"></div>
+</dialog>
+
+<dialog class="modal" id="profileModal">
+  <div class="modal-header">
+    <h2>Профиль</h2>
+    <button class="icon-btn" data-close="profileModal" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="modal-body" id="profileBody"></div>
+</dialog>
+
+<dialog class="modal" id="errorListModal">
+  <div class="modal-header">
+    <h2>Слова с ошибками</h2>
+    <button class="icon-btn" data-close="errorListModal" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="modal-body" id="errorListBody"></div>
+</dialog>
+
+<dialog class="modal" id="settingsModal">
+  <div class="modal-header">
+    <h2>Настройки</h2>
+    <button class="icon-btn" data-close="settingsModal" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="modal-body">
+    <section class="settings-section">
+      <h3>Основные</h3>
+      <div class="settings-item">
+        <span class="settings-label">Тема</span>
+        <div class="theme-segmented" role="group" aria-label="Тема">
+          <button type="button" data-theme-value="auto">Авто</button>
+          <button type="button" data-theme-value="light">Светлая</button>
+          <button type="button" data-theme-value="dark">Тёмная</button>
+        </div>
+      </div>
+    </section>
+    <section class="settings-section">
+      <h3>Данные</h3>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="exportBtn">📥 Экспорт прогресса</button>
+        <button class="btn btn-ghost" id="importBtn">📤 Импорт прогресса</button>
+      </div>
+    </section>
+    <section class="settings-section">
+      <h3>Технические</h3>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="validateBtn">🔍 Валидация банка слов</button>
+        <button class="btn btn-danger" id="resetBtn">↺ Сбросить прогресс</button>
+      </div>
+    </section>
+  </div>
+</dialog>
+
+<dialog class="modal" id="resetModal">
+  <div class="modal-header">
+    <h2>Сброс прогресса</h2>
+    <button class="icon-btn" data-close="resetModal" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="margin-top:0">Это действие удалит весь прогресс: SRS-уровни, статистику, историю ошибок. Текущее состояние будет сохранено в резервной копии.</p>
+    <p>Для подтверждения введите слово <b>СБРОС</b>:</p>
+    <input type="text" id="resetConfirmInput" class="reset-input" autocomplete="off" spellcheck="false" autocapitalize="characters">
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-danger" id="resetConfirmBtn" disabled>Сбросить</button>
+      <button class="btn btn-ghost" data-close="resetModal">Отмена</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="modal" id="validationModal">
+  <div class="modal-header">
+    <h2>Валидация и диагностика</h2>
+    <button class="icon-btn" data-close="validationModal" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="modal-body" id="validationBody"></div>
+</dialog>
+
+<input type="file" id="importFileInput" accept=".json,application/json" hidden>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
