@@ -1,8 +1,4 @@
-// Точка входа. Порядок важен:
-// 1. Загружаем state
-// 2. Инициализируем UI/настройки
-// 3. Вешаем обработчики
-// 4. Запускаем первый раунд
+// Точка входа.
 
 import { $ } from './config.js';
 import { state, loadState, saveState } from './storage.js';
@@ -16,7 +12,6 @@ import {
 import { initDebug } from './debug.js';
 import { validateBank } from './settings.js';
 
-/* === Дропдауны === */
 function closeAllDropdowns(except) {
   document.querySelectorAll('.dropdown.open').forEach(d => {
     if (d !== except) {
@@ -73,7 +68,6 @@ function initDropdowns() {
   });
 }
 
-/* === Фильтры === */
 const TASK_LABELS = { all: "Задания ЕГЭ", 9: "Задание 9", 10: "Задание 10", 11: "Задание 11", 12: "Задание 12" };
 const PROGRESS_LABELS = { all: "Прогресс", errors: "Ошибки", new: "Неизученные", review: "Повторение", hard: "Сложные" };
 
@@ -116,7 +110,6 @@ function setProgressFilter(v) {
   refreshFilterUI(); newRound();
 }
 
-/* === Обработчики === */
 function bindHandlers() {
   $("submitBtn").addEventListener("click", submitAnswer);
   $("nextBtn").addEventListener("click", newRound);
@@ -134,7 +127,6 @@ function bindHandlers() {
     if (e.key === "Enter" && getPhase() === "feedback") { e.preventDefault(); newRound(); }
   });
 
-  // Сохраняем при сворачивании
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && state) { try { saveState(); } catch (e) {} }
   });
@@ -142,7 +134,6 @@ function bindHandlers() {
     if (state) { try { saveState(); } catch (e) {} }
   });
 
-  // Футер и меню
   $("statsBtn").addEventListener("click", () => { renderStats(); $("statsModal").showModal(); });
 
   document.querySelectorAll('#dropdownProfile [data-action]').forEach(item => {
@@ -154,19 +145,16 @@ function bindHandlers() {
     });
   });
 
-  // Отработка ошибок
   $("errorBannerActionBtn").addEventListener("click", () => {
     if (runtime.errorMode) { exitErrorMode(); newRound(); }
     else openErrorList();
   });
   $("errorBannerListBtn").addEventListener("click", openErrorList);
 
-  // Тема
   document.querySelectorAll('[data-theme-value]').forEach(btn => {
     btn.addEventListener('click', () => applyTheme(btn.dataset.themeValue));
   });
 
-  // Экспорт/импорт/валидация/сброс
   $("exportBtn").addEventListener("click", exportProgress);
   $("importBtn").addEventListener("click", () => $("importFileInput").click());
   $("importFileInput").addEventListener("change", e => {
@@ -190,7 +178,6 @@ function bindHandlers() {
     doResetProgress();
   });
 
-  // Фильтры
   document.querySelectorAll('#dropdownTask .dropdown-item').forEach(item => {
     item.addEventListener('click', () => setTaskFilter(item.dataset.value));
   });
@@ -198,11 +185,16 @@ function bindHandlers() {
     item.addEventListener('click', () => setProgressFilter(item.dataset.value));
   });
 
-  // Закрытие модалок
+  // Отправка жалобы
+  $("reportSubmitBtn").addEventListener("click", async () => {
+    const { submitReport } = await import('./report.js');
+    submitReport();
+  });
+
   document.querySelectorAll("[data-close]").forEach(btn => {
     btn.addEventListener("click", () => $(btn.dataset.close).close());
   });
-  ["statsModal","settingsModal","validationModal","profileModal","resetModal","errorListModal"].forEach(id => {
+  ["statsModal","settingsModal","validationModal","profileModal","resetModal","errorListModal","reportModal"].forEach(id => {
     const m = $(id);
     m.addEventListener("click", e => { if (e.target === m) m.close(); });
   });
@@ -210,7 +202,6 @@ function bindHandlers() {
 
 export function bootRound() { newRound(); }
 
-/* === Старт === */
 loadState();
 saveState();
 initDebug();
