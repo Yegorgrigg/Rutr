@@ -22,10 +22,17 @@ export function setGap(letter, cls) {
   g.className = "gap" + (cls ? " " + cls : "");
 }
 
-export function showFeedback(type, title, text) {
+export function showFeedback(type, title, text, flagCallback) {
   const f = $("feedback");
   f.className = "feedback show " + type;
-  f.innerHTML = `<span class="rule-title">${title}</span>${text}`;
+  let html = `<span class="rule-title">${title}</span>${text}`;
+  if (flagCallback) {
+    html += `<button class="flag-btn" type="button">🚩 Сообщить об ошибке</button>`;
+  }
+  f.innerHTML = html;
+  if (flagCallback) {
+    f.querySelector('.flag-btn').addEventListener('click', flagCallback);
+  }
 }
 
 export function showToast(text) {
