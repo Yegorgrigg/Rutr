@@ -189,3 +189,10 @@ export function updateDailyOnRound() {
     if (ds.current > ds.best) ds.best = ds.current;
   }
 }
+
+export function ensureWordState(id) {
+  if (!state.words[id]) {
+    state.words[id] = normalizeWordState({ firstSeen: Date.now() });
+  }
+  return state.words[id];
+}
