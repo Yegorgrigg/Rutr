@@ -1,5 +1,4 @@
-// Игровой цикл: раунд, ответ, конец раунда. Плюс режим отработки ошибок
-// (тесно связан с раундами, поэтому живёт здесь).
+// Игровой цикл: раунд, ответ, конец раунда + режим отработки ошибок.
 
 import {
   state, saveState, ensureWordState, touchActivity, updateDailyOnRound,
@@ -9,13 +8,13 @@ import { currentPool, pickFromPool, hardCountWithTaskFilter, isHard } from './sr
 import {
   renderWord, setGap, showFeedback, showToast, updateFooterStats,
 } from './ui.js';
+import { openReportDialog } from './report.js';
 import { WORDS } from './words.js';
 import { MAX_LEVEL, ERROR_BASE_MS, ERROR_MAX_MS, SRS_INTERVALS_DAYS, DAY_MS } from './config.js';
 import { esc, plural } from './utils.js';
 
 const $ = id => document.getElementById(id);
 
-// Локальное состояние раунда — не нужно другим модулям.
 let current = null;
 let phase = "question";
 let wrongSubmits = 0;
@@ -100,7 +99,9 @@ export function submitAnswer() {
 
   if (wrongSubmits === 1) {
     inp.value = "";
-    showFeedback("err", "Правило", esc(current.r) + "<br><br>Попробуйте ещё раз.");
+    showFeedback("err", "Правило",
+      esc(current.r) + "<br><br>Попробуйте ещё раз.",
+      () => openReportDialog(current));
     setTimeout(() => {
       inp.focus({ preventScroll: true });
       inp.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -110,7 +111,8 @@ export function submitAnswer() {
     inp.disabled = true;
     setGap(current.a, "err");
     showFeedback("err", "Правильный ответ",
-      esc(current.r) + `<span class="answer-reveal">${esc(current.a)}</span>`);
+      esc(current.r) + `<span class="answer-reveal">${esc(current.a)}</span>`,
+      () => openReportDialog(current));
     endRound();
   }
 }
@@ -170,14 +172,12 @@ function showEmptyState() {
   $("feedback").innerHTML = `${hint}<div class="empty-hint"><button id="switchAllBtn">Сбросить фильтры →</button></div>`;
   document.getElementById("switchAllBtn").addEventListener("click", () => {
     runtime.taskFilter = "all"; runtime.progressFilter = "all"; previousWordId = null;
-    // Импортируем лениво, чтобы не было цикла app ↔ game
     import('./app.js').then(m => m.refreshFilterUI());
     newRound();
   });
   updateFooterStats();
 }
 
-/* === Режим отработки ошибок === */
 export function enterErrorMode() {
   const total = hardCountWithTaskFilter();
   if (total === 0) { showToast("Слов с ошибками нет 🎉"); return; }
@@ -228,6 +228,7 @@ function renderErrorList() {
             <div class="error-list-meta">
               <span>Ошибок: <b>${s.errors || 0}</b></span>
               <span>Уровень: <b>${s.level || 0}/${MAX_LEVEL}</b></span>
+              <button class="flag-btn flag-btn-inline" data-report-id="${w.id}" type="button" title="Сообщить об ошибке">🚩</button>
             </div>
             <div class="error-list-rule">${esc(w.r)}</div>
           </div>
@@ -240,6 +241,13 @@ function renderErrorList() {
       </button>
     </div>
   `;
+
+  body.querySelectorAll('[data-report-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const word = WORDS.find(w => w.id === btn.dataset.reportId);
+      if (word) openReportDialog(word);
+    });
+  });
 
   $("errorListStartBtn").addEventListener("click", () => {
     $("errorListModal").close();
