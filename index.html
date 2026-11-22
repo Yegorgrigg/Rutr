@@ -8,9 +8,6 @@
 <title>RUTR · тренажер орфографии</title>
 <link rel="stylesheet" href="styles.css">
 
-<!-- Глобальный обработчик ошибок загрузки.
-     Если какой-то модуль не загрузился / WORDS пуст — увидим красный экран,
-     а не молчаливый пустой интерфейс. -->
 <script>
   window.addEventListener('error', function (e) {
     if (!e || !e.message) return;
@@ -182,6 +179,23 @@
     <button class="icon-btn" data-close="errorListModal" aria-label="Закрыть">✕</button>
   </div>
   <div class="modal-body" id="errorListBody"></div>
+</dialog>
+
+<dialog class="modal" id="reportModal">
+  <div class="modal-header">
+    <h2>Сообщить об ошибке</h2>
+    <button class="icon-btn" data-close="reportModal" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="report-preview" id="reportPreview"></div>
+    <label class="report-label" for="reportComment">Что не так? <span style="opacity:.6;font-weight:400">(необязательно)</span></label>
+    <textarea id="reportComment" class="report-textarea" rows="3"
+              placeholder="Например: неверный ответ, опечатка в слове, неточное правило…"></textarea>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-primary" id="reportSubmitBtn">📋 Скопировать жалобу</button>
+      <button class="btn btn-ghost" data-close="reportModal">Отмена</button>
+    </div>
+  </div>
 </dialog>
 
 <dialog class="modal" id="settingsModal">
