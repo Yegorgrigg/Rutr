@@ -4,6 +4,48 @@ import { state } from './storage.js';
 import { isMastered } from './srs.js';
 import { WORDS } from './words.js';
 import { MAX_LEVEL, $ } from './config.js';
+import { esc, plural } from './utils.js';
+
+function topicOf(rule) {
+  let m = rule.match(/-[а-яё]+-(?:\/-[а-яё]+-)+/i);
+  if (m) return m[0].toLowerCase();
+  if (/^Причастие/i.test(rule)) return 'Причастия';
+  m = rule.match(/\b(I{1,3})\s*спр(?:яжение|\.)/i);
+  if (m) return m[1] + ' спряжение';
+  m = rule.match(/\b(ПРЕ|ПРИ)-/);
+  if (m) return m[1] + '-';
+  m = rule.match(/(?:Корень|ИСКЛЮЧЕНИЕ корня)\s+(-[а-яё]+-)/i);
+  if (m) return m[1].toLowerCase();
+  m = rule.match(/^Проверь:\s*([^.(]+)/i);
+  if (m) return 'Проверь: ' + m[1].trim().split(/[\s(]/)[0];
+  m = rule.match(/(-[А-ЯЁ]{2,4}-)/);
+  if (m) return m[1].toLowerCase();
+  return rule.split(/[:.]/)[0].slice(0, 40).trim();
+}
+
+function buildTopErrors() {
+  return WORDS
+    .filter(w => (state.words[w.id]?.errors || 0) > 0)
+    .sort((a, b) => (state.words[b.id]?.errors || 0) - (state.words[a.id]?.errors || 0))
+    .slice(0, 5);
+}
+
+function buildTopTopics() {
+  const map = new Map();
+  WORDS.forEach(w => {
+    const s = state.words[w.id];
+    if (!s || !s.errors) return;
+    const key = topicOf(w.r);
+    const cur = map.get(key) || { errors: 0, words: 0 };
+    cur.errors += s.errors;
+    cur.words += 1;
+    map.set(key, cur);
+  });
+  return [...map.entries()]
+    .map(([topic, s]) => ({ topic, ...s }))
+    .sort((a, b) => b.errors - a.errors)
+    .slice(0, 3);
+}
 
 export function renderStats() {
   const body = $("statsBody");
@@ -38,6 +80,13 @@ export function renderStats() {
   const sessPct = sessSubmits > 0 ? Math.round(sess.correctAttempts / sessSubmits * 100) : 0;
 
   const hist = state.stats.history || [];
+  const topErrors = buildTopErrors();
+  const topTopics = buildTopTopics();
+
+  const hardCount = WORDS.filter(w => {
+    const s = state.words[w.id];
+    return s && s.errors > 0 && s.level < 3;
+  }).length;
 
   body.innerHTML = `
     <section class="stat-section">
@@ -88,6 +137,41 @@ export function renderStats() {
         `;
       }).join("")}
     </section>
+    ${topErrors.length > 0 ? `
+    <section class="stat-section">
+      <h3>Слова с наибольшим числом ошибок</h3>
+      <div class="top-list">
+        ${topErrors.map(w => {
+          const s = state.words[w.id] || {};
+          const parts = w.w.split('..');
+          const filled = `${esc(parts[0])}<mark class="error-mark">${esc(w.a)}</mark>${esc(parts[1] || '')}`;
+          return `
+            <div class="top-item">
+              <div class="top-item-main">
+                <div class="top-item-word">${filled}</div>
+                <div class="top-item-sub">Задание ${w.t} · уровень ${s.level || 0}/${MAX_LEVEL}</div>
+              </div>
+              <div class="top-item-count">${s.errors || 0}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </section>` : ''}
+    ${topTopics.length > 0 ? `
+    <section class="stat-section">
+      <h3>Темы, где чаще ошибаетесь</h3>
+      <div class="top-list">
+        ${topTopics.map(t => `
+          <div class="top-item">
+            <div class="top-item-main">
+              <div class="top-item-word">${esc(t.topic)}</div>
+              <div class="top-item-sub">${t.words} ${plural(t.words, 'слово', 'слова', 'слов')}</div>
+            </div>
+            <div class="top-item-count">${t.errors}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>` : ''}
     ${hist.length > 0 ? `
     <section class="stat-section">
       <h3>Последние сессии</h3>
@@ -106,7 +190,22 @@ export function renderStats() {
         }).join("")}
       </div>
     </section>` : ''}
+    ${hardCount > 0 ? `
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-primary" id="statsPracticeBtn">
+        Отработать ошибки (${hardCount})
+      </button>
+    </div>` : ''}
   `;
+
+  const practiceBtn = $("statsPracticeBtn");
+  if (practiceBtn) {
+    practiceBtn.addEventListener("click", async () => {
+      $("statsModal").close();
+      const { enterErrorMode } = await import('./game.js');
+      enterErrorMode();
+    });
+  }
 }
 
 export function openProfile() {
